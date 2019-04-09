@@ -4,7 +4,7 @@ This simple Ruby script parses the Bitcoin `~/.bitcoin/chainstate` LevelDB datab
 
 It works on the chainstate database structure for **Bitcoin Core 0.15.1** and above.
 
-**NOTE: I wrote this Ruby script so that I could get an understanding of the chainstate database structure. If you're looking to get the entire UTXO set quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](bitcoin-utxo-dump)**
+**NOTE: I wrote this Ruby script so that I could get an understanding of the chainstate database structure. If you're looking to get the entire UTXO set quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](http://github.com/in3rsha/bitcoin-utxo-dump)**
 
 ## Usage
 
