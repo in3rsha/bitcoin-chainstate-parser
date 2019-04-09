@@ -1,10 +1,10 @@
 # Bitcoin Chainstate Parser
 
-This simple Ruby script reads the Bitcoin `~/.bitcoin/chainstate` LevelDB database and prints out each UTXO entry.
+This simple Ruby script parses the Bitcoin `~/.bitcoin/chainstate` LevelDB database.
 
-I wrote this script so that I could understand how the data inside the database had been compressed. It's not very fast, but it's good for educational purposes.
+It works on the chainstate database structure for **Bitcoin Core 0.15.1** and above.
 
-**NOTE: If you're looking to get the entire UTXO set from the chainstate database quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](bitcoin-utxo-dump). I basically wrote this Ruby script so that I could get an understanding of the chainstate database structure before writing the faster Go tool.**
+**NOTE: I wrote this Ruby script so that I could get an understanding of the chainstate database structure. If you're looking to get the entire UTXO set quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](bitcoin-utxo-dump)**
 
 ## Usage
 
@@ -25,26 +25,27 @@ ruby chainstate.rb
 
 The `~/.bitcoin/chainstate` folder contains a list of every unspent transaction output ([UTXO](http://learnmeabitcoin.com/glossary/utxo)) in the blockchain. These UTXOs are stored in a [LevelDB](http://leveldb.org/) database, which is a key-value store database (like Redis), but it uses flat files instead of a database server.
 
-This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent in a transaction during validation. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
+This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
 
-Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible. So whilst this means the data takes up as little disk space as possible, it also means that it's far from human-readable.
+Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible. So whilst this means the data takes up as little disk space as possible, it also means that it's far from being human-readable.
 
 Furthermore, the data inside the database has also been _obfuscated_ to help prevent triggering any anti-virus software on some computers (although I'm not sure why that happens).
 
 ## How are the UTXOs stored in LevelDB?
 
-LevelDB is a key:value store, so you could think of the UTXO database as looking something like this:
+LevelDB is a `key:value` store, so you could think of the UTXO database as looking something like this:
 
 ```
 key1:value
 key2:value
 key3:value
-...
 ```
+
+You can get a `value` by using a specific `key`, or you can iterate through every `key:value` pair in the database (this script does the latter).
 
 ### Keys
 
-The keys for UTXOs in the database have the following structure:
+Keys have the following structure (e.g. a UTXO entry):
 
 ```
 key:   43000006b4e26afc5d904f239930611606a97e730727b40d1d82d4f3f1438cf2a101
@@ -62,8 +63,7 @@ key:   43000006b4e26afc5d904f239930611606a97e730727b40d1d82d4f3f1438cf2a101
 First of all, every value in the database has been obfuscated, so you will need the get the `obfuscate_key` (which is also the first entry in the database):
 
 ```
-obfuscate_key = chainstate.get ["0e006f62667573636174655f6b6579"].pack("H*") # "\x0E\x00obfuscate_key"
-#=> b12dcefd8f872536
+b12dcefd8f872536
 ```
 
 Now, an obfuscated `value` from the database will look something like this:
@@ -72,7 +72,7 @@ Now, an obfuscated `value` from the database will look something like this:
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045
 ```
 
-To deobfuscate it, you just need to extend the `obfuscate_key` to the same length of the value, and then **XOR** the value with the extended `obfuscate_key`:
+To deobfuscate it, you just need to extend the `obfuscate_key` to the same length of the value, and then **XOR** the `value` with the extended `obfuscate_key`:
 
 ```
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045  <- value
@@ -80,7 +80,7 @@ b12dcefd8f872536b12dcefd8f872536b12dcefd8f872536b12dce  <- extended obfuscate_ke
 c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b  <- deobfuscated value (XOR)
 ```
 
-**NOTE:** The Bitwise XOR operator is useful for toggling bits on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it.
+_**NOTE:** The Bitwise XOR operator is useful for toggling bits on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it._
 
 The deobfuscated `value` of a UTXO entry in the database has the following structure:
 
@@ -99,7 +99,9 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
           height
 ```
 
-To read through the data, you need to be able to read and decode [**varints**](https://developers.google.com/protocol-buffers/docs/encoding#varints). These are just numbers that have been serialized in a specific way to help reduce the amount of space they take up within structured data. They are popular in binary protocols (because they are more efficient than fixed-length fields when transmitting numbers that vary in length).
+To read through the data, you need to be able to read and decode [**Varints**](https://developers.google.com/protocol-buffers/docs/encoding#varints). These are just numbers that have been serialized in a specific way to help reduce the amount of space they take up within structured data. They are popular in binary protocols (because they are more efficient than fixed-length fields when transmitting numbers that vary in length).
+
+---
 
 #### Varints
 
@@ -122,7 +124,9 @@ So the first varint we have read is `c08426`. To decode this varint in to an act
  100000100001010100110     <- concatenate
 ```
 
-So there we have read and decoded a varint.
+So there we have read and decoded a Varint.
+
+---
 
 #### 1. First Varint
 
@@ -144,11 +148,11 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
 So in this example:
 
  * **Height** = `0b1110100000011111011` = `532819`
- * **Coinbase** = `0b0` = not a coinbase
+ * **Coinbase** = `0b0` = `false`
 
 #### 2. Second Varint
 
-The second varint you get from the `value` gives you the `amount` of bitcoins stored in the output (in Satoshis).
+The second varint in the `value` gives you the `amount` of bitcoins stored in the output (in satoshis).
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
@@ -157,7 +161,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
               amount (compressed)
 ```
 
-However, this value has been **compressed** in a specific way, so you need to decompress it to get the actual value. I'm not entirely sure how this works, but the process can be found in the `decompress_value.rb` function (or in the [bitcoin source code](https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp#L141)).
+However, this value has been **compressed**, so you need to decompress it to get the actual value. I'm not entirely sure how this works, but the process can be found in the [`decompress_value.rb`](https://github.com/in3rsha/bitcoin-chainstate-parser/blob/master/decompress_value.rb) function (or even better, the [bitcoin source code](https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp#L141)).
 
 Nonetheless, the result of decoding the varint above and decompressing it looks like this:
 
@@ -207,7 +211,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
                                         script <- hash160 for P2PKH and P2SH, public key for P2PK, full script for rest
 ```
 
-**TIP:** You can get the **address** from this script data if it's a `P2PKH`, `P2SH`, `P2WPKH`, or `P2WSH` script.
+**TIP:** You can get an _address_ from this script data if it's a `P2PKH`, `P2SH`, `P2WPKH`, or `P2WSH` script.
 
 ## Chainstate Parsers
 
