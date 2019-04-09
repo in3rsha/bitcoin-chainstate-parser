@@ -27,7 +27,7 @@ The `~/.bitcoin/chainstate` folder contains a list of every unspent transaction 
 
 This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
 
-Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible. So whilst this means the data takes up as little disk space as possible, it also means that it's far from being human-readable.
+Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible. So whilst this means the data takes up as little disk space as possible, it also means that it's _far from being human-readable_.
 
 Furthermore, the data inside the database has also been _obfuscated_ to help prevent triggering any anti-virus software on some computers (although I'm not sure why that happens).
 
@@ -54,9 +54,9 @@ key:   43000006b4e26afc5d904f239930611606a97e730727b40d1d82d4f3f1438cf2a101
    type                             txid                                   vout
 ```
 
- * The **first byte** indicicates the type of entry. A UTXO entry starts with `0x43`, which is "**C**" in ASCII.
+ * The **first byte** indicates the type of entry. A UTXO entry starts with `0x43`, which is "**C**" in ASCII.
  * The **next 32 bytes** is the [TXID](http://learnmeabitcoin.com/glossary/txid) for the transaction the output was created in. This is in _[little-endian](http://learnmeabitcoin.com/glossary/little-endian)_, so you will need to swap the byte order if you want to search for it on the blockchain.
- * The **last byte** is the [VOUT](http://learnmeabitcoin.com/glossary/vout), which is the index number for an output in a transaction.
+ * The **last byte** is the [VOUT](http://learnmeabitcoin.com/glossary/vout), which is the index number for an output in a transaction. (This is actually a Varint and not a single byte, but I'll come to that in a moment.)
 
 ### Values
 
@@ -66,7 +66,7 @@ First of all, every value in the database has been obfuscated, so you will need 
 b12dcefd8f872536
 ```
 
-Now, an obfuscated `value` from the database will look something like this:
+An obfuscated `value` from the database will look something like this:
 
 ```
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045
@@ -115,7 +115,7 @@ c0 = 11000000
 26 = 00100110 <- first bit not set, so stop reading bytes
 ```
 
-So the first varint we have read is `c08426`. To decode this varint in to an actual value, you just take the last 7 bits of each of these bytes, add 1 to each (except for the last), then concatenate them.
+So the first varint we have read is `c08426`. To decode this varint in to an actual value; take the last 7 bits of each of these bytes, add 1 to each byte (except for the last), then concatenate the bits:
 
 ```
 11000000 10000100 00100110
@@ -130,7 +130,7 @@ So there we have read and decoded a Varint.
 
 #### 1. First Varint
 
-The first varint in the `value` contains you the **height of the block** the transaction output was included in and whether the output is from a **coinbase transaction** or not.
+The first varint in the `value` contains you the **height of the block** and whether the output is from a **coinbase transaction** or not.
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
