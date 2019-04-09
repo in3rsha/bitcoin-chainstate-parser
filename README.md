@@ -130,7 +130,7 @@ So there we have read and decoded a Varint.
 
 #### 1. First Varint
 
-The first varint in the `value` gives you the **height of the block** the transaction output was included in (every bit except for the last), as well as whether the output is from a **coinbase transaction** or not (the last bit).
+The first varint in the `value` contains you the **height of the block** the transaction output was included in and whether the output is from a **coinbase transaction** or not.
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
@@ -144,6 +144,8 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
    <------------------>^coinbase
           height
 ```
+
+The **last bit** is used for indicating if **coinbase**, and all the other bits before it are used for the **height**.
 
 So in this example:
 
@@ -185,18 +187,18 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
 The values for `nSize` indicate the following about the upcoming script data:
 
 ```
-00  = P2PKH <- upcoming script is the hash160 public key
-01  = P2SH  <- upcoming script is the hash160 of a script
-02  = P2PK  <- upcoming script is a compressed public key (nsize makes up part of the public key) [y=even]
-03  = P2PK  <- upcoming script is a compressed public key (nsize makes up part of the public key) [y=odd]
-04  = P2PK  <- upcoming script is an uncompressed public key (but has been compressed for leveldb) [y=even]
-05  = P2PK  <- upcoming script is an uncompressed public key (but has been compressed for leveldb) [y=odd]
-06+ =       <- indicates thes size of the upcoming script (subtract 6 to get the actual size in bytes)
+00  = P2PKH <- upcoming data is the hash160 public key
+01  = P2SH  <- upcoming data is the hash160 of a script
+02  = P2PK  <- upcoming data is a compressed public key (nsize makes up part of the public key) [y=even]
+03  = P2PK  <- upcoming data is a compressed public key (nsize makes up part of the public key) [y=odd]
+04  = P2PK  <- upcoming data is an uncompressed public key (but has been compressed for leveldb) [y=even]
+05  = P2PK  <- upcoming data is an uncompressed public key (but has been compressed for leveldb) [y=odd]
+06+ =       <- indicates size of upcoming full script (subtract 6 to get the actual size in bytes)
 ```
 
-The script data has been compressed as much as possible. For example, the [`P2PKH`](http://learnmeabitcoin.com/glossary/p2pkh), [`P2SH`](http://learnmeabitcoin.com/glossary/p2sh), and [`P2PK`](http://learnmeabitcoin.com/glossary/p2pk) scripts follow the same pattern of OP_CODES, so the only part of these scripts that's unique is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
+The script data has been compressed as much as possible. For example, the [`P2PKH`](http://learnmeabitcoin.com/glossary/p2pkh), [`P2SH`](http://learnmeabitcoin.com/glossary/p2sh), and [`P2PK`](http://learnmeabitcoin.com/glossary/p2pk) scripts follow the same patterns of OP_CODES, so the only part of these scripts that's unique is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
 
-Other non-standard scripts get stored in full, so the `nSize` is just used the indicate the size of those scripts (subtract 6 from this value thought to get the script size, to account for the fact that the values of 0-5 were taken for specifying a specific script type).
+Other non-standard scripts get stored in full, so the `nSize` is just used the indicate the _size_ of those scripts (subtract 6 from this value thought to get the script size, to account for the fact that the values of 0-5 were taken for specifying a specific script type).
 
 #### 4. Remaining Data
 
