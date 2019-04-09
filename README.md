@@ -76,8 +76,8 @@ To deobfuscate it, you just need to extend the `obfuscate_key` to the same lengt
 
 ```
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045  <- value
-b12dcefd8f872536b12dcefd8f872536b12dcefd8f872536b12dce  <- extended obfuscate_key (XOR)
-c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b  <- deobfuscated value
+b12dcefd8f872536b12dcefd8f872536b12dcefd8f872536b12dce  <- extended obfuscate_key
+c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b  <- deobfuscated value (XOR)
 ```
 
 **NOTE:** The Bitwise XOR operator is useful for toggling bits on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it.
@@ -99,7 +99,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
           height
 ```
 
-To read through the data, you need to be able to read and decode **varints**. These are just numbers that have been serialized in a specific way to help reduce the amount of space they take up within structured data. They are popular in binary protocols (because they are more efficient than fixed-length fields when transmitting numbers that vary in length).
+To read through the data, you need to be able to read and decode [**varints**](https://developers.google.com/protocol-buffers/docs/encoding#varints). These are just numbers that have been serialized in a specific way to help reduce the amount of space they take up within structured data. They are popular in binary protocols (because they are more efficient than fixed-length fields when transmitting numbers that vary in length).
 
 #### Varints
 
@@ -124,7 +124,7 @@ So the first varint we have read is `c08426`. To decode this varint in to an act
 
 So there we have read and decoded a varint.
 
-#### First Varint
+#### 1. First Varint
 
 The first varint in the `value` gives you the **height of the block** the transaction output was included in (every bit except for the last), as well as whether the output is from a **coinbase transaction** or not (the last bit).
 
@@ -146,7 +146,7 @@ So in this example:
  * **Height** = `0b1110100000011111011` = `532819`
  * **Coinbase** = `0b0` = not a coinbase
 
-#### Second Varint
+#### 2. Second Varint
 
 The second varint you get from the `value` gives you the `amount` of bitcoins stored in the output (in Satoshis).
 
@@ -167,7 +167,7 @@ Nonetheless, the result of decoding the varint above and decompressing it looks 
 339500  <- decompressed (decimal)
 ```
 
-#### Third Varint
+#### 3. Third Varint
 
 The third and final varint is referred to as `nSize`. This essentially indicates the _type_ of upcoming [locking script](http://learnmeabitcoin.com/glossary/scriptPubKey).
 
@@ -194,9 +194,11 @@ The script data has been compressed as much as possible. For example, the [`P2PK
 
 Other non-standard scripts get stored in full, so the `nSize` is just used the indicate the size of those scripts (subtract 6 from this value thought to get the script size, to account for the fact that the values of 0-5 were taken for specifying a specific script type).
 
-#### Remaining Data
+#### 4. Remaining Data
 
-The remainder of the `value` is the `script data`. This is going to be a **public key hash**, **script hash**, **public key**, or a **full script**. It depends on what the previous `nSize` value indicated.
+The remainding data is the `script data`. This is going to be a **public key hash**, **script hash**, **public key**, or a **full script**.
+
+For example, the `nSize` was `00`, which means that this is a **hash160 public key** from inside a `P2PKH` script:
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
@@ -205,7 +207,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
                                         script <- hash160 for P2PKH and P2SH, public key for P2PK, full script for rest
 ```
 
-You can encode this script data to get the more commonly used **address** (if it's a P2PKH, P2SH, P2WPKH, or P2WSH script).
+**TIP:** You can get the **address** from this script data if it's a `P2PKH`, `P2SH`, `P2WPKH`, or `P2WSH` script.
 
 ## Chainstate Parsers
 
