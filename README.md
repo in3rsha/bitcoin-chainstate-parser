@@ -4,32 +4,32 @@ This simple Ruby script reads the Bitcoin `~/.bitcoin/chainstate` LevelDB databa
 
 I wrote this script so that I could understand how the data inside the database had been compressed. It's not very fast, but it's good for educational purposes.
 
-**NOTE: If you're looking to get the entire UTXO set from the chainstate database quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](bitcoin-utxo-dump).**
+**NOTE: If you're looking to get the entire UTXO set from the chainstate database quickly, check out this tool instead: [http://github.com/in3rsha/bitcoin-utxo-dump](bitcoin-utxo-dump). I basically wrote this Ruby script so that I could get an understanding of the chainstate database structure before writing the faster Go tool.**
 
 ## Usage
 
-```
-ruby chainstate.rb
-```
-
-If it doesn't work, you probably need `libleveldb-dev` and the `leveldb-ruby` gem:
+You will need `libleveldb-dev` and the `leveldb-ruby` gem:
 
 ```
 sudo apt install libleveldb-dev
 sudo gem install leveldb-ruby
 ```
 
-This is more of a simple script than a program, so hack at it to get it to do what you want. I've tried to keep the code as simple as possible (and covered it in comments) to help out as much as possible.
+Then you can just:
+
+```
+ruby chainstate.rb
+```
 
 ## What is the chainstate database?
 
 The `~/.bitcoin/chainstate` folder contains a list of every unspent transaction output ([UTXO](http://learnmeabitcoin.com/glossary/utxo)) in the blockchain. These UTXOs are stored in a [LevelDB](http://leveldb.org/) database, which is a key-value store database (like Redis), but it uses flat files instead of a database server.
 
-This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent in a transaction during transaction validation. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
+This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent in a transaction during validation. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
 
-Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible to save space on disk. This means the data uses as little disk space as possible, but that means it's far from being human-readable on first glance.
+Now, seeing as this chainstate database will inevitably contain a large number of outputs, **the data has been compressed** as much as possible. So whilst this means the data takes up as little disk space as possible, it also means that it's far from human-readable.
 
-Furthermore, the data inside the database has also been obfuscated, which helps to prevent triggering any anti-virus software on some computers (although I'm not sure why that happens).
+Furthermore, the data inside the database has also been _obfuscated_ to help prevent triggering any anti-virus software on some computers (although I'm not sure why that happens).
 
 ## How are the UTXOs stored in LevelDB?
 
@@ -53,9 +53,9 @@ key:   43000006b4e26afc5d904f239930611606a97e730727b40d1d82d4f3f1438cf2a101
    type                             txid                                   vout
 ```
 
- * The **first byte** indicicates the type of entry. A UTXO entry starts with `0x43`, which is "C" in ASCII.
- * The **next 32 bytes** is the TXID for the transaction the output was created in. This is in _little-endian_, so you will need to swap the byte order if you want to search for it on the blockchain.
- * The **last byte** is the VOUT, which is the index number for a particular output in a transaction.
+ * The **first byte** indicicates the type of entry. A UTXO entry starts with `0x43`, which is "**C**" in ASCII.
+ * The **next 32 bytes** is the [TXID](http://learnmeabitcoin.com/glossary/txid) for the transaction the output was created in. This is in _[little-endian](http://learnmeabitcoin.com/glossary/little-endian)_, so you will need to swap the byte order if you want to search for it on the blockchain.
+ * The **last byte** is the [VOUT](http://learnmeabitcoin.com/glossary/vout), which is the index number for an output in a transaction.
 
 ### Values
 
@@ -72,7 +72,7 @@ Now, an obfuscated `value` from the database will look something like this:
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045
 ```
 
-To deobfuscate it, you just need to extend the `obfuscate_key` to the same length of the value, and then XOR the value with that extended `obfuscate_key`:
+To deobfuscate it, you just need to extend the `obfuscate_key` to the same length of the value, and then **XOR** the value with the extended `obfuscate_key`:
 
 ```
 71a9e87d62de25953e189f706bcf59263f15de1bf6c893bda9b045  <- value
@@ -81,8 +81,6 @@ c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b  <- deobfuscated value
 ```
 
 **NOTE:** The Bitwise XOR operator is useful for toggling bits on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it.
-
-#### Structure
 
 The deobfuscated `value` of a UTXO entry in the database has the following structure:
 
@@ -103,7 +101,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
 
 To read through the data, you need to be able to read and decode **varints**. These are just numbers that have been serialized in a specific way to help reduce the amount of space they take up within structured data. They are popular in binary protocols (because they are more efficient than fixed-length fields when transmitting numbers that vary in length).
 
-##### Varints
+#### Varints
 
 To read a varint, you just need to keep reading bytes until the **first bit is not set**. For that we need to look at each byte in its _binary representation_. So using the example above:
 
@@ -126,7 +124,7 @@ So the first varint we have read is `c08426`. To decode this varint in to an act
 
 So there we have read and decoded a varint.
 
-##### First Varint
+#### First Varint
 
 The first varint in the `value` gives you the **height of the block** the transaction output was included in (every bit except for the last), as well as whether the output is from a **coinbase transaction** or not (the last bit).
 
@@ -148,7 +146,7 @@ So in this example:
  * **Height** = `0b1110100000011111011` = `532819`
  * **Coinbase** = `0b0` = not a coinbase
 
-##### Second Varint
+#### Second Varint
 
 The second varint you get from the `value` gives you the `amount` of bitcoins stored in the output (in Satoshis).
 
@@ -169,9 +167,9 @@ Nonetheless, the result of decoding the varint above and decompressing it looks 
 339500  <- decompressed (decimal)
 ```
 
-##### Third Varint
+#### Third Varint
 
-The third and final varint is referred to as `nSize`. This essentially indicates the _type_ of upcoming locking script.
+The third and final varint is referred to as `nSize`. This essentially indicates the _type_ of upcoming [locking script](http://learnmeabitcoin.com/glossary/scriptPubKey).
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
@@ -192,11 +190,11 @@ The values for `nSize` indicate the following about the upcoming script data:
 06+ =       <- indicates thes size of the upcoming script (subtract 6 to get the actual size in bytes)
 ```
 
-The script data has been compressed as much as possible. For example, the `P2PKH`, `P2SH`, and `P2PK` scripts follow the same pattern of OP_CODES, so the only part of these scripts that's unique is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
+The script data has been compressed as much as possible. For example, the [`P2PKH`](http://learnmeabitcoin.com/glossary/p2pkh), [`P2SH`](http://learnmeabitcoin.com/glossary/p2sh), and [`P2PK`](http://learnmeabitcoin.com/glossary/p2pk) scripts follow the same pattern of OP_CODES, so the only part of these scripts that's unique is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
 
 Other non-standard scripts get stored in full, so the `nSize` is just used the indicate the size of those scripts (subtract 6 from this value thought to get the script size, to account for the fact that the values of 0-5 were taken for specifying a specific script type).
 
-##### Remaining Data
+#### Remaining Data
 
 The remainder of the `value` is the `script data`. This is going to be a **public key hash**, **script hash**, **public key**, or a **full script**. It depends on what the previous `nSize` value indicated.
 
@@ -219,3 +217,7 @@ You can encode this script data to get the more commonly used **address** (if it
 
   * <https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp>
   * <https://bitcoin.stackexchange.com/questions/61907/uxto-db-structure>
+
+## Thanks
+
+  * The writing of this script was helped massively by the [bitcoin_tools](https://github.com/sr-gi/bitcoin_tools) repo from [Sergi Delgado Segura](https://github.com/sr-gi).
