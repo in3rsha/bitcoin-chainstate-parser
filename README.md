@@ -80,7 +80,7 @@ b12dcefd8f872536b12dcefd8f872536b12dcefd8f872536b12dce  <- extended obfuscate_ke
 c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b  <- deobfuscated value (XOR)
 ```
 
-_**NOTE:** The Bitwise XOR operator is useful for toggling bits on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it._
+_**NOTE:** The Bitwise XOR operator is useful for toggling [bits](https://stackoverflow.com/questions/31575691/what-is-a-bitmask-and-a-mask/31576303#31576303) on and off (from 0 to 1 and vice versa). Therefore, XORing the value with the key obfuscates it, and XORing it again with the same key will de-obfuscate it._
 
 The deobfuscated `value` of a UTXO entry in the database has the following structure:
 
@@ -175,7 +175,7 @@ Nonetheless, the result of decoding the varint above and decompressing it looks 
 
 #### 3. Third Varint
 
-The third and final varint is referred to as `nSize`. This essentially indicates the _type_ of upcoming [locking script](http://learnmeabitcoin.com/glossary/scriptPubKey).
+The third and final varint is referred to as [`nSize`](https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp#L96). This essentially indicates the _type_ of upcoming [locking script](http://learnmeabitcoin.com/glossary/scriptPubKey).
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
