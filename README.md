@@ -225,6 +225,7 @@ value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
 
   * <https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp>
   * <https://bitcoin.stackexchange.com/questions/61907/uxto-db-structure>
+  * <https://carlmastrangelo.com/blog/lets-make-a-varint>
 
 ## Thanks
 
