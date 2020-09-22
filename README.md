@@ -149,7 +149,7 @@ The **last bit** is used for indicating if **coinbase**, and all previous bits i
 
 So in this example:
 
- * **Height** = `0b1110100000011111011` = `532819`
+ * **Height** = `0b10000010000101010011` = `532819`
  * **Coinbase** = `0b0` = `false`
 
 #### 2. Second Varint
