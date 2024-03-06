@@ -23,7 +23,7 @@ ruby chainstate.rb
 
 ## What is the chainstate database?
 
-The `~/.bitcoin/chainstate` folder contains a list of every unspent transaction output ([UTXO](http://learnmeabitcoin.com/glossary/utxo)) in the blockchain. These UTXOs are stored in a [LevelDB](http://leveldb.org/) database, which is a key-value store database (like Redis), but it uses flat files instead of a database server.
+The `~/.bitcoin/chainstate` folder contains a list of every unspent transaction output ([UTXO](https://learnmeabitcoin.com/technical/transaction/utxo/)) in the blockchain. These UTXOs are stored in a [LevelDB](https://github.com/google/leveldb) database, which is a key-value store database (like Redis), but it uses flat files instead of a database server.
 
 This database allows bitcoin to get **fast access to unspent outputs**. This is vitally important for speeding up transaction validation, as bitcoin needs to grab the "locking scripts" for each output being spent. Without this database, bitcoin would need to trawl through the entire blockchain to find each output.
 
@@ -55,8 +55,8 @@ key:   43000006b4e26afc5d904f239930611606a97e730727b40d1d82d4f3f1438cf2a101
 ```
 
  * The **first byte** indicates the type of entry. A UTXO entry starts with `0x43`, which is "**C**" in ASCII.
- * The **next 32 bytes** is the [TXID](http://learnmeabitcoin.com/glossary/txid) for the transaction the output was created in. This is in _[little-endian](http://learnmeabitcoin.com/glossary/little-endian)_, so you will need to swap the byte order if you want to search for it on the blockchain.
- * The **last byte** is the [VOUT](http://learnmeabitcoin.com/glossary/vout), which is the index number for a transaction output. (This is actually a Varint and not a single byte, but I'll come to that in a moment.)
+ * The **next 32 bytes** is the [TXID](https://learnmeabitcoin.com/technical/transaction/input/txid/) for the transaction the output was created in. This is in _[little-endian](https://learnmeabitcoin.com/technical/general/little-endian/)_, so you will need to swap the byte order if you want to search for it on the blockchain.
+ * The **last byte** is the [VOUT](https://learnmeabitcoin.com/technical/transaction/input/vout/), which is the index number for a transaction output. (This is actually a Varint and not a single byte, but I'll come to that in a moment.)
 
 ### Values
 
@@ -175,7 +175,7 @@ Nonetheless, the result of decoding and decompressing the varint above is this:
 
 #### 3. Third Varint
 
-The third and final varint is referred to as [`nSize`](https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp#L96). This essentially indicates the _type_ of upcoming [locking script](http://learnmeabitcoin.com/glossary/scriptPubKey).
+The third and final varint is referred to as [`nSize`](https://github.com/bitcoin/bitcoin/blob/master/src/compressor.cpp#L96). This essentially indicates the _type_ of upcoming [locking script](https://learnmeabitcoin.com/technical/transaction/output/scriptpubkey/).
 
 ```
 value:  c0842680ed5900a38f35518de4487c108e3810e6794fb68b189d8b
@@ -196,7 +196,7 @@ The values for `nSize` indicate the following about the upcoming script data:
 06+ =       <- indicates size of upcoming full script (subtract 6 to get the actual size in bytes)
 ```
 
-The script data has been compressed as much as possible. For example, the [`P2PKH`](http://learnmeabitcoin.com/glossary/p2pkh), [`P2SH`](http://learnmeabitcoin.com/glossary/p2sh), and [`P2PK`](http://learnmeabitcoin.com/glossary/p2pk) scripts follow the same patterns of OP_CODES, and the only unique part of these scripts is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
+The script data has been compressed as much as possible. For example, the [`P2PKH`](https://learnmeabitcoin.com/technical/script/p2pkh/), [`P2SH`](https://learnmeabitcoin.com/technical/script/p2sh/), and [`P2PK`](https://learnmeabitcoin.com/technical/script/p2pk/) scripts follow the same patterns of OP_CODES, and the only unique part of these scripts is the public keys and script hashes, so we just store those in LevelDB instead of the full script.
 
 Other non-standard scripts get stored in full, so the `nSize` is just used the indicate the _size_ of those scripts (subtract 6 from this value thought to get the script size, to account for the fact that the values of 0-5 were taken for specifying a specific script type).
 
